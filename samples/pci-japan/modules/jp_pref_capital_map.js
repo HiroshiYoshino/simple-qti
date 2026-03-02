@@ -152,7 +152,16 @@ define(["qtiCustomInteractionContext"], function (ctx) {
       wrap.className = "jp-map-wrap";
       var panel = document.createElement("div");
       panel.className = "jp-map-panel";
-      panel.appendChild(this._createMapSvg());
+      try {
+        panel.appendChild(this._createMapSvg());
+      } catch (_mapError) {
+        var fallback = document.createElement("div");
+        fallback.style.padding = "12px";
+        fallback.style.fontSize = "13px";
+        fallback.style.color = "#24405b";
+        fallback.textContent = "地図表示を読み込めませんでした。下の一覧から解答してください。";
+        panel.appendChild(fallback);
+      }
       wrap.appendChild(panel);
 
       var legend = document.createElement("div");
@@ -277,7 +286,6 @@ define(["qtiCustomInteractionContext"], function (ctx) {
         point.setAttribute("cy", String(p.y));
         point.setAttribute("r", "3.8");
         point.setAttribute("aria-label", p.pref);
-        point.setAttribute("title", p.pref);
         svg.appendChild(point);
       }
 

@@ -31,7 +31,11 @@
         custom-interaction-type-identifier="urn:example.jp:pci:pref-capital-map:v2"
       >
         <qti-interaction-modules>
-          <qti-interaction-module id="jpPrefCapitalMapV2" primary-path="modules/jp_pref_capital_map_v2.js"/>
+          <qti-interaction-module
+            id="jpPrefCapitalMapV2"
+            primary-path="modules/jp_pref_capital_map_v2.js"
+            fallback-path="modules/jp_pref_capital_map.js"
+          />
         </qti-interaction-modules>
         <qti-interaction-markup>
           <div class="jp-pref-capital-map-root"></div>
