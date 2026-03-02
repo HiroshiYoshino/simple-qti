@@ -89,21 +89,21 @@ define(["qtiCustomInteractionContext"], function (ctx) {
         ".dice-stage-wrap{border:1px solid #cfd7e3;border-radius:10px;background:#f5f8fc;padding:10px;}",
         ".dice-stage-title{font-size:13px;font-weight:700;margin-bottom:8px;color:#27405f;}",
         ".dice-stage{position:relative;height:220px;overflow:hidden;border-radius:8px;background:radial-gradient(circle at 30% 25%,#ffffff,#deebf8);}",
-        ".dice-net-anim{position:absolute;left:50%;top:50%;width:170px;height:170px;transform:translate(-50%,-50%);}",
-        ".dice-cell{position:absolute;width:44px;height:44px;border:2px solid #365173;border-radius:6px;background:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;color:#28415f;transition:transform 0.9s ease,opacity 0.9s ease;}",
-        ".dice-net-anim.folding .dice-cell{transform:translate(58px,58px) scale(0.35) rotate(30deg);opacity:0.08;}",
+        ".dice-net-anim{position:absolute;left:50%;top:50%;width:230px;height:190px;transform:translate(-50%,-50%);}",
+        ".dice-cell{position:absolute;width:44px;height:44px;border:2px solid #365173;border-radius:6px;background:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;color:#28415f;transform-origin:center center;transition:transform 0.8s ease,opacity 0.8s ease,background-color 0.4s ease,border-color 0.4s ease;}",
+        ".dice-cell.conflict{background:#ffe7ea;border-color:#b44b5f;color:#8e2a3d;box-shadow:0 0 0 2px rgba(180,75,95,0.2);animation:conflictPulse 0.6s ease-in-out 2;}",
         ".dice-cube{position:absolute;left:50%;top:50%;width:72px;height:72px;transform-style:preserve-3d;transform:translate(-50%,-50%) rotateX(-22deg) rotateY(35deg);opacity:0;}",
         ".dice-cube.show{opacity:1;animation:diceSpin 1.8s ease-out forwards;}",
         ".dice-cube-face{position:absolute;width:72px;height:72px;border:2px solid #304b6a;background:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;color:#223b57;}",
         ".face-front{transform:translateZ(36px);} .face-back{transform:rotateY(180deg) translateZ(36px);} .face-right{transform:rotateY(90deg) translateZ(36px);} .face-left{transform:rotateY(-90deg) translateZ(36px);} .face-top{transform:rotateX(90deg) translateZ(36px);} .face-bottom{transform:rotateX(-90deg) translateZ(36px);}",
-        ".dice-fail{position:absolute;left:50%;top:50%;width:180px;height:120px;transform:translate(-50%,-50%);opacity:0;}",
+        ".dice-fail{position:absolute;left:50%;top:50%;width:220px;height:130px;transform:translate(-50%,-50%);opacity:0;}",
         ".dice-fail.show{opacity:1;}",
-        ".dice-fail-piece{position:absolute;width:38px;height:38px;border:2px solid #7a3040;border-radius:6px;background:#fff4f6;display:flex;align-items:center;justify-content:center;color:#7a3040;font-weight:700;animation:scatter 1.2s ease-out forwards;}",
+        ".dice-fail-note{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:8px 10px;border-radius:8px;border:1px solid #c26a7a;background:#fff0f3;color:#7a3040;font-size:12px;font-weight:700;}",
         ".dice-feedback{margin-top:10px;padding:10px;border-radius:8px;background:#fff;border:1px solid #cfd7e3;font-size:13px;line-height:1.5;color:#1f3651;min-height:48px;}",
         ".dice-feedback.ok{border-color:#7cb48d;background:#eefaf1;}",
         ".dice-feedback.ng{border-color:#d39797;background:#fff1f1;}",
         "@keyframes diceSpin{0%{transform:translate(-50%,-50%) rotateX(-18deg) rotateY(20deg) scale(0.5);}100%{transform:translate(-50%,-50%) rotateX(-30deg) rotateY(390deg) scale(1);}}",
-        "@keyframes scatter{0%{transform:translate(0,0) rotate(0deg);opacity:1;}100%{transform:translate(var(--tx),var(--ty)) rotate(var(--rot));opacity:0.15;}}"
+        "@keyframes conflictPulse{0%{transform:scale(1);}50%{transform:scale(1.08);}100%{transform:scale(1);}}"
       ].join("");
       this._baseElement.appendChild(style);
 
@@ -232,7 +232,8 @@ define(["qtiCustomInteractionContext"], function (ctx) {
       if (!option) {
         return;
       }
-      var foldable = this._isFoldable(option.cells);
+      var analysis = this._analyzeNet(option.cells);
+      var foldable = analysis.foldable;
       var stage = this._baseElement.querySelector('[data-role="stage"]');
       var feedback = this._baseElement.querySelector('[data-role="feedback"]');
       if (!stage || !feedback) {
@@ -240,27 +241,25 @@ define(["qtiCustomInteractionContext"], function (ctx) {
       }
 
       stage.innerHTML = "";
-      var net = this._buildNetAnimation(option);
-      stage.appendChild(net);
+      var scene = this._buildNetAnimation(option, analysis);
+      stage.appendChild(scene.base);
 
-      var cube = this._buildCube();
+      var cube = this._buildCube(analysis.normalToFaceLabel);
       stage.appendChild(cube);
 
-      var fail = this._buildFailedAssembly();
+      var fail = this._buildFailedAssembly(analysis.conflictPairs);
       stage.appendChild(fail);
 
+      var totalMs = this._playFoldAnimation(scene, analysis, animate);
       if (!animate) {
-        net.classList.add("folding");
         if (foldable) {
           cube.classList.add("show");
         } else {
           fail.classList.add("show");
         }
+        this._setFeedback(optionId, foldable, feedback);
       } else {
         var self = this;
-        this._timers.push(setTimeout(function () {
-          net.classList.add("folding");
-        }, 120));
         this._timers.push(setTimeout(function () {
           if (foldable) {
             cube.classList.add("show");
@@ -268,73 +267,159 @@ define(["qtiCustomInteractionContext"], function (ctx) {
             fail.classList.add("show");
           }
           self._setFeedback(optionId, foldable, feedback);
-        }, 980));
-      }
-
-      if (!animate) {
-        this._setFeedback(optionId, foldable, feedback);
+        }, totalMs));
       }
     },
 
-    _buildNetAnimation: function (option) {
+    _buildNetAnimation: function (option, analysis) {
       var base = document.createElement("div");
       base.className = "dice-net-anim";
 
       var minX = 999;
       var minY = 999;
+      var maxX = -999;
+      var maxY = -999;
       var i;
       for (i = 0; i < option.cells.length; i += 1) {
         if (option.cells[i].x < minX) { minX = option.cells[i].x; }
         if (option.cells[i].y < minY) { minY = option.cells[i].y; }
+        if (option.cells[i].x > maxX) { maxX = option.cells[i].x; }
+        if (option.cells[i].y > maxY) { maxY = option.cells[i].y; }
       }
+
+      var size = 44;
+      var w = (maxX - minX + 1) * size;
+      var h = (maxY - minY + 1) * size;
+      var offsetX = Math.floor((230 - w) / 2);
+      var offsetY = Math.floor((190 - h) / 2);
+      var nodes = {};
 
       for (i = 0; i < option.cells.length; i += 1) {
         var c = option.cells[i];
         var d = document.createElement("div");
         d.className = "dice-cell";
-        d.style.left = String((c.x - minX) * 44) + "px";
-        d.style.top = String((c.y - minY) * 44) + "px";
+        var left = offsetX + (c.x - minX) * size;
+        var top = offsetY + (c.y - minY) * size;
+        d.style.left = String(left) + "px";
+        d.style.top = String(top) + "px";
         d.textContent = String(i + 1);
+        var key = k(c);
+        nodes[key] = {
+          el: d,
+          x: left + size / 2,
+          y: top + size / 2,
+          depth: analysis.depthMap[key] || 0,
+          normalKey: analysis.normalMap[key] || "0,0,1"
+        };
         base.appendChild(d);
       }
-      return base;
+      return {
+        base: base,
+        nodes: nodes,
+        centerX: 115,
+        centerY: 95
+      };
     },
 
-    _buildCube: function () {
+    _playFoldAnimation: function (scene, analysis, animate) {
+      var targetByNormal = {
+        "0,0,1": { x: 0, y: 0, a: 0 },
+        "1,0,0": { x: 36, y: -5, a: 18 },
+        "-1,0,0": { x: -36, y: -5, a: -18 },
+        "0,1,0": { x: 0, y: 34, a: 10 },
+        "0,-1,0": { x: 0, y: -34, a: -10 },
+        "0,0,-1": { x: 0, y: -12, a: 0 }
+      };
+
+      var maxDepth = 0;
+      var key;
+      for (key in scene.nodes) {
+        if (Object.prototype.hasOwnProperty.call(scene.nodes, key)) {
+          if (scene.nodes[key].depth > maxDepth) {
+            maxDepth = scene.nodes[key].depth;
+          }
+        }
+      }
+      var baseDelay = animate ? 120 : 0;
+      var stepDelay = animate ? 260 : 0;
+      var applyFold = function () {
+        for (key in scene.nodes) {
+          if (!Object.prototype.hasOwnProperty.call(scene.nodes, key)) {
+            continue;
+          }
+          var node = scene.nodes[key];
+          var target = targetByNormal[node.normalKey] || targetByNormal["0,0,1"];
+          var dx = scene.centerX + target.x - node.x;
+          var dy = scene.centerY + target.y - node.y;
+          var rot = target.a;
+          var scale = node.normalKey === "0,0,1" ? 1 : 0.88;
+          var delay = baseDelay + node.depth * stepDelay;
+          node.el.style.transitionDelay = String(delay) + "ms";
+          node.el.style.transform = "translate(" + dx + "px," + dy + "px) scale(" + scale + ") rotate(" + rot + "deg)";
+          node.el.style.opacity = node.normalKey === "0,0,-1" ? "0.45" : "0.92";
+        }
+      };
+      if (animate) {
+        this._timers.push(setTimeout(applyFold, 30));
+      } else {
+        applyFold();
+      }
+
+      if (!analysis.foldable) {
+        var i;
+        var conflictKeys = {};
+        for (i = 0; i < analysis.conflictPairs.length; i += 1) {
+          conflictKeys[analysis.conflictPairs[i].a] = true;
+          conflictKeys[analysis.conflictPairs[i].b] = true;
+        }
+        var markConflict = function () {
+          for (key in conflictKeys) {
+            if (Object.prototype.hasOwnProperty.call(conflictKeys, key) && scene.nodes[key]) {
+              scene.nodes[key].el.classList.add("conflict");
+            }
+          }
+        };
+        if (animate) {
+          this._timers.push(setTimeout(markConflict, baseDelay + maxDepth * stepDelay + 200));
+        } else {
+          markConflict();
+        }
+      }
+
+      return baseDelay + maxDepth * stepDelay + (animate ? 900 : 0);
+    },
+
+    _buildCube: function (normalToFaceLabel) {
       var cube = document.createElement("div");
       cube.className = "dice-cube";
-      var faces = ["front", "back", "right", "left", "top", "bottom"];
+      var faces = [
+        { css: "front", n: "0,0,1" },
+        { css: "back", n: "0,0,-1" },
+        { css: "right", n: "1,0,0" },
+        { css: "left", n: "-1,0,0" },
+        { css: "top", n: "0,-1,0" },
+        { css: "bottom", n: "0,1,0" }
+      ];
       for (var i = 0; i < faces.length; i += 1) {
         var f = document.createElement("div");
-        f.className = "dice-cube-face face-" + faces[i];
-        f.textContent = String(i + 1);
+        f.className = "dice-cube-face face-" + faces[i].css;
+        f.textContent = normalToFaceLabel[faces[i].n] || "?";
         cube.appendChild(f);
       }
       return cube;
     },
 
-    _buildFailedAssembly: function () {
+    _buildFailedAssembly: function (conflictPairs) {
       var cont = document.createElement("div");
       cont.className = "dice-fail";
-      var dirs = [
-        { x: -70, y: -30, rot: "-35deg" },
-        { x: -20, y: -45, rot: "18deg" },
-        { x: 25, y: -10, rot: "55deg" },
-        { x: 65, y: 20, rot: "12deg" },
-        { x: -50, y: 30, rot: "-22deg" },
-        { x: 10, y: 40, rot: "28deg" }
-      ];
-      for (var i = 0; i < 6; i += 1) {
-        var p = document.createElement("div");
-        p.className = "dice-fail-piece";
-        p.style.left = "70px";
-        p.style.top = "38px";
-        p.style.setProperty("--tx", dirs[i].x + "px");
-        p.style.setProperty("--ty", dirs[i].y + "px");
-        p.style.setProperty("--rot", dirs[i].rot);
-        p.textContent = String(i + 1);
-        cont.appendChild(p);
+      var note = document.createElement("div");
+      note.className = "dice-fail-note";
+      if (conflictPairs.length) {
+        note.textContent = "面が重なって衝突: " + conflictPairs[0].labelA + " と " + conflictPairs[0].labelB;
+      } else {
+        note.textContent = "折りたたみ時に衝突が発生";
       }
+      cont.appendChild(note);
       return cont;
     },
 
@@ -362,19 +447,48 @@ define(["qtiCustomInteractionContext"], function (ctx) {
       return null;
     },
 
-    _isFoldable: function (cells) {
+    _analyzeNet: function (cells) {
+      var empty = {
+        foldable: false,
+        depthMap: {},
+        normalMap: {},
+        normalToFaceLabel: {},
+        conflictPairs: []
+      };
       if (!cells || cells.length !== 6) {
-        return false;
+        return empty;
       }
       var map = {};
+      var indexByKey = {};
       var i;
       for (i = 0; i < cells.length; i += 1) {
-        map[k(cells[i])] = cells[i];
+        var key = k(cells[i]);
+        map[key] = cells[i];
+        indexByKey[key] = i + 1;
+      }
+
+      var pivot = cells[0];
+      var bestNeighbors = -1;
+      for (i = 0; i < cells.length; i += 1) {
+        var nCount = 0;
+        var dirs0 = [
+          { dx: 1, dy: 0 }, { dx: -1, dy: 0 },
+          { dx: 0, dy: 1 }, { dx: 0, dy: -1 }
+        ];
+        for (var d0 = 0; d0 < dirs0.length; d0 += 1) {
+          if (map[(cells[i].x + dirs0[d0].dx) + "," + (cells[i].y + dirs0[d0].dy)]) {
+            nCount += 1;
+          }
+        }
+        if (nCount > bestNeighbors) {
+          bestNeighbors = nCount;
+          pivot = cells[i];
+        }
       }
 
       var seen = {};
-      var queue = [cells[0]];
-      seen[k(cells[0])] = true;
+      var queue = [pivot];
+      seen[k(pivot)] = true;
       var dirs = [
         { dx: 1, dy: 0 }, { dx: -1, dy: 0 },
         { dx: 0, dy: 1 }, { dx: 0, dy: -1 }
@@ -396,17 +510,19 @@ define(["qtiCustomInteractionContext"], function (ctx) {
         }
       }
       if (count !== 6) {
-        return false;
+        return empty;
       }
 
-      var root = cells[0];
       var ori = {};
-      ori[k(root)] = {
+      var depthMap = {};
+      ori[k(pivot)] = {
         n: { x: 0, y: 0, z: 1 },
         u: { x: 1, y: 0, z: 0 },
         v: { x: 0, y: 1, z: 0 }
       };
-      queue = [root];
+      depthMap[k(pivot)] = 0;
+      queue = [pivot];
+      var inconsistent = false;
 
       while (queue.length) {
         var cur = queue.shift();
@@ -427,19 +543,32 @@ define(["qtiCustomInteractionContext"], function (ctx) {
           var no = this._rot(o, t.d);
           if (!ori[key2]) {
             ori[key2] = no;
+            depthMap[key2] = depthMap[ck] + 1;
             queue.push(map[key2]);
           } else if (!this._sameOri(ori[key2], no)) {
-            return false;
+            inconsistent = true;
           }
         }
       }
+      if (inconsistent) {
+        return empty;
+      }
 
       var normals = {};
+      var normalOwners = {};
+      var normalMap = {};
+      var normalToFaceLabel = {};
       for (var ok in ori) {
         if (Object.prototype.hasOwnProperty.call(ori, ok)) {
           var n = ori[ok].n;
           var nk2 = n.x + "," + n.y + "," + n.z;
           normals[nk2] = true;
+          normalMap[ok] = nk2;
+          normalToFaceLabel[nk2] = String(indexByKey[ok]);
+          if (!normalOwners[nk2]) {
+            normalOwners[nk2] = [];
+          }
+          normalOwners[nk2].push(ok);
         }
       }
       var normalsCount = 0;
@@ -448,7 +577,28 @@ define(["qtiCustomInteractionContext"], function (ctx) {
           normalsCount += 1;
         }
       }
-      return normalsCount === 6;
+      var conflictPairs = [];
+      for (var nkey in normalOwners) {
+        if (Object.prototype.hasOwnProperty.call(normalOwners, nkey) && normalOwners[nkey].length > 1) {
+          var owners = normalOwners[nkey];
+          for (i = 1; i < owners.length; i += 1) {
+            conflictPairs.push({
+              a: owners[0],
+              b: owners[i],
+              labelA: String(indexByKey[owners[0]]),
+              labelB: String(indexByKey[owners[i]])
+            });
+          }
+        }
+      }
+
+      return {
+        foldable: normalsCount === 6 && conflictPairs.length === 0,
+        depthMap: depthMap,
+        normalMap: normalMap,
+        normalToFaceLabel: normalToFaceLabel,
+        conflictPairs: conflictPairs
+      };
     },
 
     _rot: function (o, d) {
