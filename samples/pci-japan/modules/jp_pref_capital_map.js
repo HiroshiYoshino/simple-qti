@@ -65,8 +65,20 @@ define(["qtiCustomInteractionContext"], function (ctx) {
       return a.localeCompare(b, "ja");
     });
 
+  var REGION_GROUPS = [
+    { name: "北海道", color: "#d8ecff", codes: ["hokkaido"] },
+    { name: "東北", color: "#cfe3ff", codes: ["aomori", "iwate", "akita", "miyagi", "yamagata", "fukushima"] },
+    { name: "関東", color: "#ffe7c7", codes: ["ibaraki", "tochigi", "gunma", "saitama", "chiba", "tokyo", "kanagawa"] },
+    { name: "中部", color: "#ffe1d9", codes: ["niigata", "toyama", "ishikawa", "fukui", "yamanashi", "nagano", "gifu", "shizuoka", "aichi"] },
+    { name: "近畿", color: "#eadfff", codes: ["mie", "shiga", "kyoto", "osaka", "hyogo", "nara", "wakayama"] },
+    { name: "中国", color: "#d7f3dd", codes: ["tottori", "shimane", "okayama", "hiroshima", "yamaguchi"] },
+    { name: "四国", color: "#ffe9b9", codes: ["tokushima", "kagawa", "ehime", "kochi"] },
+    { name: "九州", color: "#ffdbc7", codes: ["fukuoka", "saga", "nagasaki", "kumamoto", "oita", "miyazaki", "kagoshima"] },
+    { name: "沖縄", color: "#cceff1", codes: ["okinawa"] }
+  ];
+
   var pci = {
-    typeIdentifier: "urn:example.jp:pci:pref-capital-map:v1",
+    typeIdentifier: "urn:example.jp:pci:pref-capital-map:v2",
     _baseElement: null,
     _config: {},
     _state: { selections: {} },
@@ -109,17 +121,22 @@ define(["qtiCustomInteractionContext"], function (ctx) {
       var style = document.createElement("style");
       style.textContent = [
         ".jp-root{display:flex;flex-direction:column;gap:14px;max-width:1000px;}",
-        ".jp-map-wrap{border:1px solid #c8d0d9;border-radius:8px;overflow:auto;background:linear-gradient(180deg,#f8fbff 0%,#eef4fa 100%);padding:10px;}",
+        ".jp-map-wrap{border:1px solid #c8d0d9;border-radius:8px;overflow:auto;background:linear-gradient(180deg,#f7fbff 0%,#e9f2fb 100%);padding:10px;}",
         ".jp-map-panel{min-width:1000px;}",
         ".jp-map-svg{display:block;width:1000px;height:620px;}",
         ".jp-map-note{font-size:12px;color:#2f4156;margin:0;}",
+        ".jp-map-legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}",
+        ".jp-map-legend-item{display:flex;align-items:center;gap:4px;background:#fff;border:1px solid #d7e2ee;border-radius:999px;padding:2px 8px;font-size:11px;color:#24364a;}",
+        ".jp-map-legend-dot{width:10px;height:10px;border-radius:50%;display:inline-block;border:1px solid rgba(0,0,0,0.18);}",
         ".jp-answer-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;}",
         ".jp-answer-item{display:flex;align-items:center;gap:8px;border:1px solid #d8e0ea;background:#fff;border-radius:6px;padding:6px 8px;}",
         ".jp-pref-name{font-size:13px;font-weight:700;line-height:1.2;min-width:78px;}",
         ".jp-pref-select{flex:1;min-width:0;font-size:12px;padding:3px;}",
-        ".jp-map-outline{fill:#dfe8f2;stroke:#8ea3b7;stroke-width:1.5;}",
-        ".jp-map-point{fill:#1f7a8c;}",
-        ".jp-map-label{font-size:10px;fill:#17324d;dominant-baseline:middle;}"
+        ".jp-sea{fill:#dff1ff;}",
+        ".jp-region-shape{stroke:#6d8297;stroke-width:1.4;stroke-linejoin:round;opacity:0.95;}",
+        ".jp-region-caption{font-size:12px;fill:#17324d;font-weight:700;}",
+        ".jp-map-point{fill:#0d5f75;stroke:#ffffff;stroke-width:1.1;}",
+        ".jp-map-line{stroke:#88a2bc;stroke-width:0.8;stroke-dasharray:3 3;opacity:0.75;}"
       ].join("");
       this._baseElement.appendChild(style);
 
@@ -128,7 +145,7 @@ define(["qtiCustomInteractionContext"], function (ctx) {
 
       var note = document.createElement("div");
       note.className = "jp-map-note";
-      note.textContent = "日本地図（概略図）を見ながら、下の一覧で各都道府県の県庁所在地を選択してください。";
+      note.textContent = "日本地図（概略図・v2）を見ながら、下の一覧で各都道府県の県庁所在地を選択してください。";
       root.appendChild(note);
 
       var wrap = document.createElement("div");
@@ -137,6 +154,25 @@ define(["qtiCustomInteractionContext"], function (ctx) {
       panel.className = "jp-map-panel";
       panel.appendChild(this._createMapSvg());
       wrap.appendChild(panel);
+
+      var legend = document.createElement("div");
+      legend.className = "jp-map-legend";
+      for (var r = 0; r < REGION_GROUPS.length; r += 1) {
+        var region = REGION_GROUPS[r];
+        var chip = document.createElement("div");
+        chip.className = "jp-map-legend-item";
+
+        var dot = document.createElement("span");
+        dot.className = "jp-map-legend-dot";
+        dot.style.backgroundColor = region.color;
+        chip.appendChild(dot);
+
+        var text = document.createElement("span");
+        text.textContent = region.name;
+        chip.appendChild(text);
+        legend.appendChild(chip);
+      }
+      wrap.appendChild(legend);
       root.appendChild(wrap);
 
       var answers = document.createElement("div");
@@ -196,53 +232,158 @@ define(["qtiCustomInteractionContext"], function (ctx) {
       title.textContent = "日本地図の概略図";
       svg.appendChild(title);
 
-      var groups = [
-        ["hokkaido", "aomori", "iwate", "akita", "miyagi", "yamagata", "fukushima"],
-        ["niigata", "toyama", "ishikawa", "fukui", "nagano", "gifu", "shizuoka", "aichi", "mie"],
-        ["ibaraki", "tochigi", "gunma", "saitama", "chiba", "tokyo", "kanagawa", "yamanashi"],
-        ["shiga", "kyoto", "osaka", "hyogo", "nara", "wakayama", "tottori", "shimane", "okayama", "hiroshima", "yamaguchi"],
-        ["kagawa", "tokushima", "ehime", "kochi"],
-        ["fukuoka", "saga", "nagasaki", "kumamoto", "oita", "miyazaki", "kagoshima"],
-        ["okinawa"]
-      ];
+      var sea = document.createElementNS(ns, "rect");
+      sea.setAttribute("class", "jp-sea");
+      sea.setAttribute("x", "120");
+      sea.setAttribute("y", "20");
+      sea.setAttribute("width", "780");
+      sea.setAttribute("height", "600");
+      sea.setAttribute("rx", "14");
+      svg.appendChild(sea);
 
-      for (var g = 0; g < groups.length; g += 1) {
-        var poly = document.createElementNS(ns, "polyline");
-        poly.setAttribute("class", "jp-map-outline");
-        poly.setAttribute("fill", "none");
-        poly.setAttribute("points", this._pointsForCodes(groups[g]));
-        svg.appendChild(poly);
+      for (var g = 0; g < REGION_GROUPS.length; g += 1) {
+        var region = REGION_GROUPS[g];
+        var points = this._prefPoints(region.codes);
+        var shape = this._buildRegionPath(points, 20);
+        var path = document.createElementNS(ns, "path");
+        path.setAttribute("class", "jp-region-shape");
+        path.setAttribute("d", shape);
+        path.setAttribute("fill", region.color);
+        svg.appendChild(path);
+
+        var center = this._centroid(points);
+        var caption = document.createElementNS(ns, "text");
+        caption.setAttribute("class", "jp-region-caption");
+        caption.setAttribute("x", String(center.x - 12));
+        caption.setAttribute("y", String(center.y - 14));
+        caption.textContent = region.name;
+        svg.appendChild(caption);
       }
 
       for (var i = 0; i < PREFECTURES.length; i += 1) {
         var p = PREFECTURES[i];
+
+        var guide = document.createElementNS(ns, "line");
+        guide.setAttribute("class", "jp-map-line");
+        guide.setAttribute("x1", String(p.x));
+        guide.setAttribute("y1", String(p.y));
+        guide.setAttribute("x2", String(p.x + 10));
+        guide.setAttribute("y2", String(p.y - 8));
+        svg.appendChild(guide);
+
         var point = document.createElementNS(ns, "circle");
         point.setAttribute("class", "jp-map-point");
         point.setAttribute("cx", String(p.x));
         point.setAttribute("cy", String(p.y));
-        point.setAttribute("r", "3.5");
+        point.setAttribute("r", "3.8");
+        point.setAttribute("aria-label", p.pref);
+        point.setAttribute("title", p.pref);
         svg.appendChild(point);
-
-        var label = document.createElementNS(ns, "text");
-        label.setAttribute("class", "jp-map-label");
-        label.setAttribute("x", String(p.x + 6));
-        label.setAttribute("y", String(p.y));
-        label.textContent = p.pref;
-        svg.appendChild(label);
       }
 
       return svg;
     },
 
-    _pointsForCodes: function (codes) {
-      var points = [];
+    _prefPoints: function (codes) {
+      var result = [];
       for (var i = 0; i < codes.length; i += 1) {
-        var pref = this._findPref(codes[i]);
-        if (pref) {
-          points.push(pref.x + "," + pref.y);
+        var p = this._findPref(codes[i]);
+        if (p) {
+          result.push({ x: p.x, y: p.y });
         }
       }
-      return points.join(" ");
+      return result;
+    },
+
+    _buildRegionPath: function (points, padding) {
+      if (!points.length) {
+        return "";
+      }
+      if (points.length === 1) {
+        return this._circlePath(points[0], 18);
+      }
+
+      var hull = this._convexHull(points);
+      var cx = 0;
+      var cy = 0;
+      for (var i = 0; i < hull.length; i += 1) {
+        cx += hull[i].x;
+        cy += hull[i].y;
+      }
+      cx /= hull.length;
+      cy /= hull.length;
+
+      var expanded = [];
+      for (var j = 0; j < hull.length; j += 1) {
+        var dx = hull[j].x - cx;
+        var dy = hull[j].y - cy;
+        var len = Math.sqrt(dx * dx + dy * dy) || 1;
+        expanded.push({
+          x: hull[j].x + (dx / len) * padding,
+          y: hull[j].y + (dy / len) * padding
+        });
+      }
+
+      var d = "M " + expanded[0].x + " " + expanded[0].y;
+      for (var k = 1; k < expanded.length; k += 1) {
+        d += " L " + expanded[k].x + " " + expanded[k].y;
+      }
+      d += " Z";
+      return d;
+    },
+
+    _circlePath: function (p, r) {
+      return "M " + (p.x - r) + " " + p.y +
+        " a " + r + " " + r + " 0 1 0 " + (2 * r) + " 0" +
+        " a " + r + " " + r + " 0 1 0 " + (-2 * r) + " 0";
+    },
+
+    _convexHull: function (points) {
+      var pts = points.slice().sort(function (a, b) {
+        if (a.x !== b.x) {
+          return a.x - b.x;
+        }
+        return a.y - b.y;
+      });
+
+      var lower = [];
+      for (var i = 0; i < pts.length; i += 1) {
+        while (lower.length >= 2 &&
+          this._cross(lower[lower.length - 2], lower[lower.length - 1], pts[i]) <= 0) {
+          lower.pop();
+        }
+        lower.push(pts[i]);
+      }
+
+      var upper = [];
+      for (var j = pts.length - 1; j >= 0; j -= 1) {
+        while (upper.length >= 2 &&
+          this._cross(upper[upper.length - 2], upper[upper.length - 1], pts[j]) <= 0) {
+          upper.pop();
+        }
+        upper.push(pts[j]);
+      }
+
+      lower.pop();
+      upper.pop();
+      return lower.concat(upper);
+    },
+
+    _cross: function (o, a, b) {
+      return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+    },
+
+    _centroid: function (points) {
+      var sx = 0;
+      var sy = 0;
+      for (var i = 0; i < points.length; i += 1) {
+        sx += points[i].x;
+        sy += points[i].y;
+      }
+      return {
+        x: sx / points.length,
+        y: sy / points.length
+      };
     },
 
     _findPref: function (code) {
