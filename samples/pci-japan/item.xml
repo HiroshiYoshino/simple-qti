@@ -23,7 +23,7 @@
   <qti-item-body>
     <div>
       <h3>都道府県の位置を見て、対応する県庁所在地を選択してください</h3>
-      <p>各都道府県ラベルの下のプルダウンで県庁所在地を選びます。</p>
+      <p>上の地図（概略）を参考に、下の一覧のプルダウンで県庁所在地を選んでください。</p>
 
       <qti-portable-custom-interaction
         response-identifier="RESPONSE"

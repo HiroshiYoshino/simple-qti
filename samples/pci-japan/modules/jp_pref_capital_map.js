@@ -108,37 +108,48 @@ define(["qtiCustomInteractionContext"], function (ctx) {
 
       var style = document.createElement("style");
       style.textContent = [
-        ".jp-map-wrap{position:relative;max-width:1000px;min-height:640px;border:1px solid #c8d0d9;border-radius:8px;overflow:auto;background:linear-gradient(180deg,#f8fbff 0%,#eef4fa 100%);}",
-        ".jp-map-panel{position:relative;width:1000px;height:620px;}",
-        ".jp-pref-node{position:absolute;width:104px;padding:6px;background:#ffffff;box-shadow:0 1px 3px rgba(0,0,0,0.12);border:1px solid #d8e0ea;border-radius:6px;transform:translate(-52px,-10px);}",
-        ".jp-pref-name{font-size:12px;font-weight:700;line-height:1.2;margin-bottom:4px;}",
-        ".jp-pref-select{width:100%;font-size:12px;padding:2px;}",
-        ".jp-map-note{font-size:12px;color:#2f4156;margin:6px 0 10px;}"
+        ".jp-root{display:flex;flex-direction:column;gap:14px;max-width:1000px;}",
+        ".jp-map-wrap{border:1px solid #c8d0d9;border-radius:8px;overflow:auto;background:linear-gradient(180deg,#f8fbff 0%,#eef4fa 100%);padding:10px;}",
+        ".jp-map-panel{min-width:1000px;}",
+        ".jp-map-svg{display:block;width:1000px;height:620px;}",
+        ".jp-map-note{font-size:12px;color:#2f4156;margin:0;}",
+        ".jp-answer-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;}",
+        ".jp-answer-item{display:flex;align-items:center;gap:8px;border:1px solid #d8e0ea;background:#fff;border-radius:6px;padding:6px 8px;}",
+        ".jp-pref-name{font-size:13px;font-weight:700;line-height:1.2;min-width:78px;}",
+        ".jp-pref-select{flex:1;min-width:0;font-size:12px;padding:3px;}",
+        ".jp-map-outline{fill:#dfe8f2;stroke:#8ea3b7;stroke-width:1.5;}",
+        ".jp-map-point{fill:#1f7a8c;}",
+        ".jp-map-label{font-size:10px;fill:#17324d;dominant-baseline:middle;}"
       ].join("");
       this._baseElement.appendChild(style);
 
+      var root = document.createElement("div");
+      root.className = "jp-root";
+
       var note = document.createElement("div");
       note.className = "jp-map-note";
-      note.textContent = "簡易地図（位置は概略）: 各都道府県に対して県庁所在地を選択";
-      this._baseElement.appendChild(note);
+      note.textContent = "日本地図（概略図）を見ながら、下の一覧で各都道府県の県庁所在地を選択してください。";
+      root.appendChild(note);
 
       var wrap = document.createElement("div");
       wrap.className = "jp-map-wrap";
       var panel = document.createElement("div");
       panel.className = "jp-map-panel";
+      panel.appendChild(this._createMapSvg());
       wrap.appendChild(panel);
+      root.appendChild(wrap);
 
+      var answers = document.createElement("div");
+      answers.className = "jp-answer-grid";
       for (var i = 0; i < PREFECTURES.length; i += 1) {
         var p = PREFECTURES[i];
-        var node = document.createElement("div");
-        node.className = "jp-pref-node";
-        node.style.left = p.x + "px";
-        node.style.top = p.y + "px";
+        var item = document.createElement("div");
+        item.className = "jp-answer-item";
 
         var label = document.createElement("div");
         label.className = "jp-pref-name";
         label.textContent = p.pref;
-        node.appendChild(label);
+        item.appendChild(label);
 
         var select = document.createElement("select");
         select.className = "jp-pref-select";
@@ -165,11 +176,82 @@ define(["qtiCustomInteractionContext"], function (ctx) {
         select.addEventListener("change", onChange);
         this._eventHandlers.push({ el: select, fn: onChange });
 
-        node.appendChild(select);
-        panel.appendChild(node);
+        item.appendChild(select);
+        answers.appendChild(item);
+      }
+      root.appendChild(answers);
+
+      this._baseElement.appendChild(root);
+    },
+
+    _createMapSvg: function () {
+      var ns = "http://www.w3.org/2000/svg";
+      var svg = document.createElementNS(ns, "svg");
+      svg.setAttribute("class", "jp-map-svg");
+      svg.setAttribute("viewBox", "120 20 780 600");
+      svg.setAttribute("role", "img");
+      svg.setAttribute("aria-label", "日本地図の概略図");
+
+      var title = document.createElementNS(ns, "title");
+      title.textContent = "日本地図の概略図";
+      svg.appendChild(title);
+
+      var groups = [
+        ["hokkaido", "aomori", "iwate", "akita", "miyagi", "yamagata", "fukushima"],
+        ["niigata", "toyama", "ishikawa", "fukui", "nagano", "gifu", "shizuoka", "aichi", "mie"],
+        ["ibaraki", "tochigi", "gunma", "saitama", "chiba", "tokyo", "kanagawa", "yamanashi"],
+        ["shiga", "kyoto", "osaka", "hyogo", "nara", "wakayama", "tottori", "shimane", "okayama", "hiroshima", "yamaguchi"],
+        ["kagawa", "tokushima", "ehime", "kochi"],
+        ["fukuoka", "saga", "nagasaki", "kumamoto", "oita", "miyazaki", "kagoshima"],
+        ["okinawa"]
+      ];
+
+      for (var g = 0; g < groups.length; g += 1) {
+        var poly = document.createElementNS(ns, "polyline");
+        poly.setAttribute("class", "jp-map-outline");
+        poly.setAttribute("fill", "none");
+        poly.setAttribute("points", this._pointsForCodes(groups[g]));
+        svg.appendChild(poly);
       }
 
-      this._baseElement.appendChild(wrap);
+      for (var i = 0; i < PREFECTURES.length; i += 1) {
+        var p = PREFECTURES[i];
+        var point = document.createElementNS(ns, "circle");
+        point.setAttribute("class", "jp-map-point");
+        point.setAttribute("cx", String(p.x));
+        point.setAttribute("cy", String(p.y));
+        point.setAttribute("r", "3.5");
+        svg.appendChild(point);
+
+        var label = document.createElementNS(ns, "text");
+        label.setAttribute("class", "jp-map-label");
+        label.setAttribute("x", String(p.x + 6));
+        label.setAttribute("y", String(p.y));
+        label.textContent = p.pref;
+        svg.appendChild(label);
+      }
+
+      return svg;
+    },
+
+    _pointsForCodes: function (codes) {
+      var points = [];
+      for (var i = 0; i < codes.length; i += 1) {
+        var pref = this._findPref(codes[i]);
+        if (pref) {
+          points.push(pref.x + "," + pref.y);
+        }
+      }
+      return points.join(" ");
+    },
+
+    _findPref: function (code) {
+      for (var i = 0; i < PREFECTURES.length; i += 1) {
+        if (PREFECTURES[i].code === code) {
+          return PREFECTURES[i];
+        }
+      }
+      return null;
     },
 
     _onSelectChange: function (event) {
