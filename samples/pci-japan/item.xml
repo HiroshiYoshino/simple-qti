@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<qti-assessment-item
+  xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.imsglobal.org/xsd/imsqtiasi_v3p0 https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqti_asiv3p0_v1p0.xsd"
+  identifier="jpPrefCapitalMapSimple"
+  title="都道府県と県庁所在地の対応"
+  adaptive="false"
+  time-dependent="false"
+>
+  <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="string">
+    <qti-correct-response>
+      <qti-value>hokkaido:札幌市|aomori:青森市|iwate:盛岡市|miyagi:仙台市|akita:秋田市|yamagata:山形市|fukushima:福島市|ibaraki:水戸市|tochigi:宇都宮市|gunma:前橋市|saitama:さいたま市|chiba:千葉市|tokyo:東京都|kanagawa:横浜市|niigata:新潟市|toyama:富山市|ishikawa:金沢市|fukui:福井市|yamanashi:甲府市|nagano:長野市|gifu:岐阜市|shizuoka:静岡市|aichi:名古屋市|mie:津市|shiga:大津市|kyoto:京都市|osaka:大阪市|hyogo:神戸市|nara:奈良市|wakayama:和歌山市|tottori:鳥取市|shimane:松江市|okayama:岡山市|hiroshima:広島市|yamaguchi:山口市|tokushima:徳島市|kagawa:高松市|ehime:松山市|kochi:高知市|fukuoka:福岡市|saga:佐賀市|nagasaki:長崎市|kumamoto:熊本市|oita:大分市|miyazaki:宮崎市|kagoshima:鹿児島市|okinawa:那覇市</qti-value>
+    </qti-correct-response>
+  </qti-response-declaration>
+
+  <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float">
+    <qti-default-value>
+      <qti-value>0</qti-value>
+    </qti-default-value>
+  </qti-outcome-declaration>
+
+  <qti-item-body>
+    <div>
+      <h3>都道府県の位置を見て、対応する県庁所在地を選択してください</h3>
+      <p>各都道府県ラベルの下のプルダウンで県庁所在地を選びます。</p>
+
+      <qti-portable-custom-interaction
+        response-identifier="RESPONSE"
+        module="jpPrefCapitalMap"
+        custom-interaction-type-identifier="urn:example.jp:pci:pref-capital-map:v1"
+      >
+        <qti-interaction-modules>
+          <qti-interaction-module id="jpPrefCapitalMap" primary-path="modules/jp_pref_capital_map.js"/>
+        </qti-interaction-modules>
+        <qti-interaction-markup>
+          <div class="jp-pref-capital-map-root"></div>
+        </qti-interaction-markup>
+      </qti-portable-custom-interaction>
+    </div>
+  </qti-item-body>
+
+  <qti-response-processing template="https://www.imsglobal.org/question/qti_v3p0/rptemplates/match_correct"/>
+</qti-assessment-item>
