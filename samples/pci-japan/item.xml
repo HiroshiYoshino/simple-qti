@@ -27,11 +27,11 @@
 
       <qti-portable-custom-interaction
         response-identifier="RESPONSE"
-        module="jpPrefCapitalMap"
-        custom-interaction-type-identifier="urn:example.jp:pci:pref-capital-map:v1"
+        module="jpPrefCapitalMapV2"
+        custom-interaction-type-identifier="urn:example.jp:pci:pref-capital-map:v2"
       >
         <qti-interaction-modules>
-          <qti-interaction-module id="jpPrefCapitalMap" primary-path="modules/jp_pref_capital_map.js"/>
+          <qti-interaction-module id="jpPrefCapitalMapV2" primary-path="modules/jp_pref_capital_map_v2.js"/>
         </qti-interaction-modules>
         <qti-interaction-markup>
           <div class="jp-pref-capital-map-root"></div>
