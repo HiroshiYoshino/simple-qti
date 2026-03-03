@@ -190,6 +190,7 @@ define(["qtiCustomInteractionContext"], function (ctx) {
       this._handlers = [];
     },
 
+    // 役割: 2つのオブジェクトを浅くマージして新しいオブジェクトを返す。
     _extend: function (A, B) {
       var r = {};
       var key;
