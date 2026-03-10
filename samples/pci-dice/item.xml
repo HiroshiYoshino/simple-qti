@@ -3,8 +3,8 @@
   xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://www.imsglobal.org/xsd/imsqtiasi_v3p0 https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqti_asiv3p0_v1p0.xsd"
-  identifier="pciSimpleSplit01"
-  title="PCI分割サンプル: 必須部分と問題固有部分"
+  identifier="diceNetAssemble01"
+  title="サイコロの展開図判定"
   adaptive="false"
   time-dependent="false"
 >
@@ -22,21 +22,19 @@
 
   <qti-item-body>
     <div>
-      <h3>PCI分割サンプル</h3>
-      <p>core / renderer / question 宣言の3層に分割した例です。</p>
+      <h3>3つの展開図風の図から、実際にサイコロを組み立てられるものを1つ選んでください</h3>
+      <p>選択後、展開図が立方体になるかどうかのアニメーションと説明が表示されます。</p>
 
       <qti-portable-custom-interaction
         response-identifier="RESPONSE"
-        module="basicChoiceQuestion"
-        custom-interaction-type-identifier="urn:example.jp:pci:basic-choice-split:v1"
+        module="diceNetPci"
+        custom-interaction-type-identifier="urn:example.jp:pci:dice-net:v1"
       >
         <qti-interaction-modules>
-          <qti-interaction-module id="pciSimpleCore" primary-path="modules/pci_simple_core.js"/>
-          <qti-interaction-module id="choiceRenderer" primary-path="modules/choice_renderer.js"/>
-          <qti-interaction-module id="basicChoiceQuestion" primary-path="modules/basic_choice_question.js"/>
+          <qti-interaction-module id="diceNetPci" primary-path="modules/dice_pci.js"/>
         </qti-interaction-modules>
         <qti-interaction-markup>
-          <div class="pci-simple-root"></div>
+          <div class="dice-net-root"></div>
         </qti-interaction-markup>
       </qti-portable-custom-interaction>
     </div>

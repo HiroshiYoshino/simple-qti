@@ -1,12 +1,20 @@
 "use strict";
 
 /*
- * 問題固有モジュール
- * - 状態モデル定義（selected）
- * - モデル <-> QTIレスポンス変換
- * - UI描画
+ * 問題固有モジュール（宣言中心）
+ * - モデル定義
+ * - レスポンス変換
+ * - レンダラへの設定受け渡し
  */
-define(["qtiCustomInteractionContext", "pciSimpleCore"], function (ctx, core) {
+define(["qtiCustomInteractionContext", "pciSimpleCore", "choiceRenderer"], function (ctx, core, choiceRenderer) {
+  var schema = {
+    inputName: "pci-basic-choice-split",
+    options: [
+      { id: "A", label: "A: 正しくない" },
+      { id: "B", label: "B: 正しい" }
+    ]
+  };
+
   var question = {
     // 役割: 設定値（properties）を組み立てる。
     resolveProps: function (configuration) {
@@ -48,81 +56,19 @@ define(["qtiCustomInteractionContext", "pciSimpleCore"], function (ctx, core) {
     },
 
     // 役割: QTIレスポンスをモデルへ変換する。
-    responseToModel: function (response, prevModel) {
+    responseToModel: function (response) {
       var next = "";
       if (response && response.base && typeof response.base.string === "string") {
         next = response.base.string;
       }
-      return {
-        selected: next || (prevModel && prevModel.selected) || ""
-      };
+      return { selected: next };
     },
 
-    // 役割: 問題UIを描画し、viewオブジェクトを返す。
+    // 役割: 共通レンダラを使って問題UIを描画する。
     renderQuestion: function (container, model, props, onModelChange) {
-      container.innerHTML = "";
-
-      var style = document.createElement("style");
-      style.textContent = [
-        ".pci-basic-wrap{border:1px solid #ccd6e2;border-radius:8px;padding:10px;background:#f9fbff;max-width:420px;}",
-        ".pci-basic-prompt{margin:0 0 8px 0;font-size:14px;color:#213a55;}",
-        ".pci-basic-option{display:block;margin:6px 0;font-size:14px;}",
-        ".pci-basic-status{margin-top:8px;font-size:12px;color:#314a66;}"
-      ].join("");
-      container.appendChild(style);
-
-      var wrap = document.createElement("div");
-      wrap.className = "pci-basic-wrap";
-
-      var prompt = document.createElement("p");
-      prompt.className = "pci-basic-prompt";
-      prompt.textContent = props.promptText;
-      wrap.appendChild(prompt);
-
-      var options = [
-        { id: "A", label: "A: 正しくない" },
-        { id: "B", label: "B: 正しい" }
-      ];
-
-      var handlers = [];
-      for (var i = 0; i < options.length; i += 1) {
-        var opt = options[i];
-        var label = document.createElement("label");
-        label.className = "pci-basic-option";
-
-        var input = document.createElement("input");
-        input.type = "radio";
-        input.name = "pci-basic-choice-split";
-        input.value = opt.id;
-        if (model.selected === opt.id) {
-          input.checked = true;
-        }
-
-        var handler = function (event) {
-          if (!event.target.checked) {
-            return;
-          }
-          onModelChange({ selected: event.target.value });
-        };
-        input.addEventListener("change", handler);
-        handlers.push({ el: input, fn: handler });
-
-        label.appendChild(input);
-        label.appendChild(document.createTextNode(" " + opt.label));
-        wrap.appendChild(label);
-      }
-
-      var status = document.createElement("div");
-      status.className = "pci-basic-status";
-      status.textContent = model.selected ? (props.promptPrefix + model.selected) : "未選択";
-      wrap.appendChild(status);
-
-      container.appendChild(wrap);
-
-      return {
-        statusEl: status,
-        handlers: handlers
-      };
+      return choiceRenderer.render(container, model, props, schema, function (selected) {
+        onModelChange({ selected: selected });
+      });
     },
 
     // 役割: 描画済みUIの表示だけを同期更新する。
@@ -130,17 +76,12 @@ define(["qtiCustomInteractionContext", "pciSimpleCore"], function (ctx, core) {
       if (!view || !view.statusEl) {
         return;
       }
-      view.statusEl.textContent = model.selected ? (props.promptPrefix + model.selected) : "未選択";
+      choiceRenderer.setStatus(view.statusEl, model.selected, props);
     },
 
     // 役割: UIイベントリスナの後始末を行う。
     cleanupQuestion: function (view) {
-      if (!view || !view.handlers) {
-        return;
-      }
-      for (var i = 0; i < view.handlers.length; i += 1) {
-        view.handlers[i].el.removeEventListener("change", view.handlers[i].fn);
-      }
+      choiceRenderer.cleanup(view);
     }
   };
 
